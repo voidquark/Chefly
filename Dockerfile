@@ -47,8 +47,4 @@ ENV PORT=8080 \
     GIN_MODE=release \
     RECIPE_GENERATION_LIMIT=unlimited
 
-LABEL maintainer="void@voidquark.com" \
-      description="Chefly - AI Powered Recipe Generator" \
-      version="1.0"
-
 CMD ["/app/chefly"]

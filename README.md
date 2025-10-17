@@ -11,17 +11,14 @@ Chefly is a high-quality recipe generator powered by Claude AI.
   - Admin panel to manage registered users and set recipe generation limits per user
   - Generate shopping lists from recipes to easily bookmark ingredients
   - Audit logging of every request in json or pretty format
+  - Supported `sk`, `en` language
 
 > [!IMPORTANT]
 > This is a **vibe coded** project created to explore what Claude AI can do, how to interact with such a model, and how to plan development around it for project in 1day.
 It was a self-exploration project with a single purpose to build something for my own personal use.
-
-> I’m sharing it here in case someone wants to reuse it, fork it, extend it, or add new features.
+I’m sharing it here in case someone wants to reuse it, fork it, extend it, or add new features.
 Breaking changes may occur at any time and without notice.
-
-> Long term maintenance is uncertain. Anyone can open an issue for feature requests or bug fixes, but there is no guarantee that I will implement them, please don’t take it personally.
-
-> There will be no human interaction with this project at the code level by design.
+**Long term maintenance is uncertain**. Anyone can open an issue for feature requests or bug fixes, but there is no guarantee that I will implement them, please don’t take it personally. There will be no human interaction with this project at the code level by design.
 
 ## Stack Information
 

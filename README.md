@@ -9,7 +9,7 @@ Chefly is a high-quality recipe generator powered by Claude AI.
   -	Mobile first UI design
   - Share recipes via public link
   - Mark favorite recipes, filter them, or delete unwanted ones
-  - Filter recipes by meat type, cuisine, dietary preferences, difficulty, and preparation time
+  - Generate recipes by meat type, cuisine, dietary preferences, difficulty, and preparation time
   - Admin panel to manage registered users and set recipe generation limits per user
   - Generate shopping lists from recipes to easily bookmark ingredients
   - Audit logging of every request in json or pretty format

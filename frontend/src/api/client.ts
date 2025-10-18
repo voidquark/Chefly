@@ -27,7 +27,6 @@ class APIClient {
       headers: {
         'Content-Type': 'application/json',
       },
-      timeout: 120000,
     });
 
     // Add request interceptor to include auth token
@@ -168,7 +167,13 @@ class APIClient {
 
   // Recipe Generation
   async generateRecipe(data: RecipeGenerationRequest): Promise<Recipe> {
-    const response = await this.client.post<Recipe>('/recipes/generate', data);
+    const response = await this.client.post<Recipe>(
+      '/recipes/generate',
+      data,
+      {
+        timeout: 120000,
+      }
+    );
     return response.data;
   }
 

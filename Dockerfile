@@ -6,7 +6,7 @@ COPY frontend/ ./
 RUN npm run build
 
 FROM golang:1.25.3-alpine3.22 AS backend-builder
-RUN apk add --no-cache gcc musl-dev sqlite-dev git wget
+RUN apk add --no-cache gcc musl-dev sqlite-dev git
 WORKDIR /build/backend
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download
@@ -22,6 +22,7 @@ RUN apk add --no-cache \
     ca-certificates \
     tzdata \
     sqlite-libs \
+    wget \
     && rm -rf /var/cache/apk/*
 ARG USER_UID=1000
 ARG USER_GID=1000

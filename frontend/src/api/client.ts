@@ -48,22 +48,23 @@ class APIClient {
         const originalRequest = error.config as any;
 
         // If 401 and we haven't tried refreshing yet
-        if (error.response?.status === 401 && !originalRequest._retry) {
-          if (this.isRefreshing) {
-            // If already refreshing, queue this request
-            return new Promise((resolve, reject) => {
-              this.failedQueue.push({ resolve, reject });
-            })
-              .then(() => {
-                return this.client(originalRequest);
-              })
-              .catch((err) => {
-                return Promise.reject(err);
-              });
+        if (error.response?.status === 401) {
+          if (originalRequest._retry) {
+          // Already retried, don’t queue or retry again
+            return Promise.reject(error);
           }
 
           originalRequest._retry = true;
+          if (this.isRefreshing) {
+            return new Promise((resolve, reject) => {
+              this.failedQueue.push({ resolve, reject });
+          })
+              .then(() => this.client(originalRequest))
+              .catch((err) => Promise.reject(err));
+          }
+
           this.isRefreshing = true;
+          // continue refresh flow...
 
           const refreshToken = localStorage.getItem('refresh_token');
 

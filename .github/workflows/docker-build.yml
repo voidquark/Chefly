@@ -36,9 +36,9 @@ jobs:
         with:
           images: voidquark/chefly
           tags: |
-            type=raw,value=latest,branch=main
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=dev,enable=${{ github.ref == 'refs/heads/dev' }}
             type=sha,format=short
-            type=raw,value=dev,branch=dev
 
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5

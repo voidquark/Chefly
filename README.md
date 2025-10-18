@@ -1,5 +1,7 @@
 # Chefly - AI Powered Recipe Generator
 
+[![License](https://img.shields.io/github/license/voidquark/chefly)](LICENSE)
+
 Chefly is a high-quality recipe generator powered by Claude AI.
 
 **Features:**
@@ -53,7 +55,7 @@ podman run -d \
   -e CLAUDE_MODEL="claude-sonnet-4-20250514" \
   -e OPENAI_API_KEY="sk-..." \
   -e OPENAI_MODEL="dall-e-3" \
-  -e REGISTRATION_ENABLED="true" \
+  -e REGISTRATION_ENABLED=true \
   -e RECIPE_GENERATION_LIMIT="unlimited" \
   -e AUDIT_LOG_ENABLED=true \
   -e AUDIT_LOG_LEVEL="info" \

@@ -31,7 +31,6 @@ ${CONTAINER_RUNTIME} run -d \
   -p 8080:8080 \
   -v ./data:/app/data:Z \
   -e JWT_SECRET="${JWT_SECRET}" \
-  -e DB_PATH="${DB_PATH}" \
   -e CLAUDE_API_KEY="${CLAUDE_API_KEY}" \
   -e CLAUDE_MODEL="${CLAUDE_MODEL:-claude-3-haiku-20240307}" \
   -e OPENAI_API_KEY="${OPENAI_API_KEY}" \

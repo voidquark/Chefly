@@ -5,7 +5,11 @@ on:
     branches:
       - main
       - dev
-
+    paths-ignore:
+      - 'README.md'
+      - 'LICENSE'
+      - 'podman-build.sh'
+      - 'container-run.sh'
   release:
     types: [created]
 

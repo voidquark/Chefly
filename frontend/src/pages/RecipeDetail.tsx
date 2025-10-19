@@ -19,6 +19,7 @@ export const RecipeDetail: React.FC = () => {
   const [addingToList, setAddingToList] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   usePageTitle(recipe?.title || 'Recipe Detail');
 
   useEffect(() => {
@@ -150,15 +151,33 @@ export const RecipeDetail: React.FC = () => {
       </button>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
-        <img
-          src={recipe.image_path}
-          alt={recipe.title}
-          loading="lazy"
-          className="w-full h-64 object-cover"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = 'https://via.placeholder.com/800x400/FF6B6B/FFFFFF?text=' + encodeURIComponent(recipe.title);
-          }}
-        />
+        <div className="relative w-full h-64 bg-gray-200 dark:bg-gray-700">
+          {/* Thumbnail - loads immediately, blurred */}
+          {recipe.thumbnail_path && (
+            <img
+              src={recipe.thumbnail_path}
+              alt=""
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+                imageLoaded ? 'opacity-0' : 'opacity-100 blur-sm'
+              }`}
+            />
+          )}
+
+          {/* Full image - loads lazily */}
+          <img
+            src={recipe.image_path}
+            alt={recipe.title}
+            loading="lazy"
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+              imageLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
+            onLoad={() => setImageLoaded(true)}
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'https://via.placeholder.com/800x400/FF6B6B/FFFFFF?text=' + encodeURIComponent(recipe.title);
+              setImageLoaded(true);
+            }}
+          />
+        </div>
 
         <div className="p-8">
           <div className="flex justify-between items-start mb-4">

@@ -133,6 +133,9 @@ func RunMigrations(db *sql.DB) error {
 		`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token ON refresh_tokens(token)`,
 		`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at ON refresh_tokens(expires_at)`,
+
+		// Migration: Add thumbnail_path column to recipes table for optimized images
+		`ALTER TABLE recipes ADD COLUMN thumbnail_path TEXT DEFAULT ''`,
 	}
 
 	for i, migration := range migrations {

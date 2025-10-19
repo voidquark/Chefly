@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, ChefHat, Heart } from 'lucide-react';
 import type { RecipeSummary } from '../types';
@@ -10,19 +10,42 @@ interface RecipeCardProps {
 
 export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onToggleFavorite }) => {
   const navigate = useNavigate();
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  // Use thumbnail if available, otherwise fallback to full image
+  const thumbnailSrc = recipe.thumbnail_path || recipe.image_path;
+  const fullImageSrc = recipe.image_path;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer animate-fadeIn">
       <div onClick={() => navigate(`/recipe/${recipe.id}`)}>
-        <img
-          src={recipe.image_path}
-          alt={recipe.title}
-          loading="lazy"
-          className="w-full h-48 object-cover"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300/FF6B6B/FFFFFF?text=' + encodeURIComponent(recipe.title);
-          }}
-        />
+        <div className="relative w-full h-48 bg-gray-200 dark:bg-gray-700">
+          {/* Thumbnail - loads immediately, blurred */}
+          {thumbnailSrc && (
+            <img
+              src={thumbnailSrc}
+              alt=""
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+                imageLoaded ? 'opacity-0' : 'opacity-100 blur-sm'
+              }`}
+            />
+          )}
+
+          {/* Full image - loads lazily */}
+          <img
+            src={fullImageSrc}
+            alt={recipe.title}
+            loading="lazy"
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+              imageLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
+            onLoad={() => setImageLoaded(true)}
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300/FF6B6B/FFFFFF?text=' + encodeURIComponent(recipe.title);
+              setImageLoaded(true);
+            }}
+          />
+        </div>
         <div className="p-4">
           <div className="flex justify-between items-start mb-2">
             <h3 className="text-xl font-bold text-gray-900 dark:text-white line-clamp-2">{recipe.title}</h3>

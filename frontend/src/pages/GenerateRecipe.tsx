@@ -73,17 +73,14 @@ export const GenerateRecipe: React.FC = () => {
 
     // Prevent multiple submissions
     if (loading) {
-      console.log('BLOCKED: Already loading');
       return;
     }
 
-    console.log('=== GENERATE RECIPE CALLED ===');
     setError('');
     setLoading(true);
     setGeneratedRecipe(null);
 
     try {
-      console.log('Calling apiClient.generateRecipe...');
       const recipe = await apiClient.generateRecipe({
         meat_type: meatType,
         side_ingredients: sideIngredients,
@@ -93,13 +90,10 @@ export const GenerateRecipe: React.FC = () => {
         difficulty: difficulty,
         language: language,
       });
-      console.log('Recipe received:', recipe.id);
       setGeneratedRecipe(recipe);
     } catch (err: any) {
-      console.error('Recipe generation error:', err);
       setError(err.response?.data?.error || 'Failed to generate recipe. Please try again.');
     } finally {
-      console.log('=== GENERATE RECIPE COMPLETE ===');
       setLoading(false);
     }
   };

@@ -54,22 +54,18 @@ class APIClient {
       (response) => response,
       async (error: AxiosError) => {
         const originalRequest = error.config as any;
-        console.log(`[INTERCEPTOR] Caught error: ${error.response?.status} for ${originalRequest.url}`);
 
         // If 401 and we haven't tried refreshing yet for this specific request
         if (error.response?.status === 401 && !originalRequest._isRetry) {
-          console.log('[INTERCEPTOR] 401 detected, starting refresh flow');
           // Mark this request as being retried to prevent infinite loops
           originalRequest._isRetry = true;
 
           // Get or create the refresh promise
           if (!this.refreshPromise) {
-            console.log('[INTERCEPTOR] Creating new refresh promise');
             const refreshToken = localStorage.getItem('refresh_token');
 
             if (!refreshToken) {
               // No refresh token, redirect to login
-              console.log('[INTERCEPTOR] No refresh token, redirecting to login');
               this.clearAuthAndRedirect();
               return Promise.reject(error);
             }
@@ -77,7 +73,6 @@ class APIClient {
             // Create a promise that all waiting requests can share
             this.refreshPromise = (async () => {
               try {
-                console.log('[INTERCEPTOR] Refreshing token...');
                 // Try to refresh the token using a separate axios instance (no interceptors)
                 const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
                   refresh_token: refreshToken,
@@ -89,23 +84,18 @@ class APIClient {
                 localStorage.setItem('access_token', access_token);
                 localStorage.setItem('refresh_token', newRefreshToken);
 
-                console.log('[INTERCEPTOR] Token refreshed successfully');
                 return access_token;
               } catch (refreshError) {
                 // Refresh failed, clear auth and redirect
-                console.error('[INTERCEPTOR] Token refresh failed:', refreshError);
                 this.clearAuthAndRedirect();
                 throw refreshError;
               } finally {
                 // Reset refresh state after a small delay to allow all pending requests to grab the promise
                 setTimeout(() => {
-                  console.log('[INTERCEPTOR] Clearing refresh promise');
                   this.refreshPromise = null;
                 }, 100);
               }
             })();
-          } else {
-            console.log('[INTERCEPTOR] Waiting for existing refresh promise');
           }
 
           try {
@@ -115,12 +105,10 @@ class APIClient {
             // Update the original request with new token
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
 
-            console.log(`[INTERCEPTOR] Retrying request to ${originalRequest.url}`);
             // Retry the original request using the retry client (bypasses interceptors completely)
             return this.retryClient.request(originalRequest);
           } catch (refreshError) {
             // Refresh failed
-            console.error('[INTERCEPTOR] Retry after refresh failed:', refreshError);
             return Promise.reject(refreshError);
           }
         }
@@ -178,9 +166,7 @@ class APIClient {
 
   // Recipe Generation
   async generateRecipe(data: RecipeGenerationRequest): Promise<Recipe> {
-    console.log('[API CLIENT] generateRecipe called with data:', data);
     const response = await this.client.post<Recipe>('/recipes/generate', data);
-    console.log('[API CLIENT] generateRecipe response received:', response.data.id);
     return response.data;
   }
 

@@ -234,11 +234,12 @@ func main() {
 	fmt.Printf("📌 Version: %s (built: %s)\n", Version, BuildTime)
 
 	// Create HTTP server with timeouts
+	// Note: WriteTimeout must be long enough for AI recipe generation (typically 30-60 seconds)
 	srv := &http.Server{
 		Addr:         ":" + port,
 		Handler:      router,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 120 * time.Second, // Allow up to 2 minutes for AI recipe generation
 		IdleTimeout:  60 * time.Second,
 	}
 

@@ -34,11 +34,13 @@ export const DarkModeProvider: React.FC<DarkModeProviderProps> = ({ children }) 
     // Update localStorage
     localStorage.setItem('darkMode', isDarkMode.toString());
 
-    // Update document class
+    // Update document class for both dark and light modes
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
     } else {
       document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
     }
   }, [isDarkMode]);
 

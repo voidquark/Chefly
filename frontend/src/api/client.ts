@@ -19,7 +19,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 class APIClient {
   private client: AxiosInstance;
   private isRefreshing = false;
-  private failedQueue: Array<{ resolve: (value?: unknown) => void; reject: (reason?: unknown) => void }> = [];
+  private refreshPromise: Promise<string> | null = null;
 
   constructor() {
     this.client = axios.create({
@@ -47,75 +47,80 @@ class APIClient {
       async (error: AxiosError) => {
         const originalRequest = error.config as any;
 
-        // If 401 and we haven't tried refreshing yet
-        if (error.response?.status === 401 && !originalRequest._retry) {
-          if (this.isRefreshing) {
-            // If already refreshing, queue this request and wait for the refresh to complete
-            return new Promise((resolve, reject) => {
-              this.failedQueue.push({ resolve, reject });
-            }).then((token) => {
+        // If 401 and we haven't tried refreshing yet for this specific request
+        if (error.response?.status === 401 && !originalRequest._isRetry) {
+          // Mark this request as being retried to prevent infinite loops
+          originalRequest._isRetry = true;
+
+          // If a refresh is already in progress, wait for it
+          if (this.isRefreshing && this.refreshPromise) {
+            try {
+              const newToken = await this.refreshPromise;
               // Update the request with the new token and retry
-              originalRequest.headers.Authorization = `Bearer ${token}`;
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
               return this.client(originalRequest);
-            });
+            } catch (refreshError) {
+              // Refresh failed, reject this request
+              return Promise.reject(refreshError);
+            }
           }
 
-          originalRequest._retry = true;
+          // Start a new token refresh
           this.isRefreshing = true;
-
           const refreshToken = localStorage.getItem('refresh_token');
 
           if (!refreshToken) {
             // No refresh token, redirect to login
+            this.isRefreshing = false;
+            this.refreshPromise = null;
             this.clearAuthAndRedirect();
             return Promise.reject(error);
           }
 
+          // Create a promise that all waiting requests can share
+          this.refreshPromise = (async () => {
+            try {
+              // Try to refresh the token
+              const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
+                refresh_token: refreshToken,
+              });
+
+              const { access_token, refresh_token: newRefreshToken } = response.data;
+
+              // Store new tokens
+              localStorage.setItem('access_token', access_token);
+              localStorage.setItem('refresh_token', newRefreshToken);
+
+              return access_token;
+            } catch (refreshError) {
+              // Refresh failed, clear auth and redirect
+              this.clearAuthAndRedirect();
+              throw refreshError;
+            } finally {
+              // Reset refresh state
+              this.isRefreshing = false;
+              this.refreshPromise = null;
+            }
+          })();
+
           try {
-            // Try to refresh the token
-            const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
-              refresh_token: refreshToken,
-            });
-
-            const { access_token, refresh_token: newRefreshToken } = response.data;
-
-            // Store new tokens
-            localStorage.setItem('access_token', access_token);
-            localStorage.setItem('refresh_token', newRefreshToken);
+            // Wait for the token refresh to complete
+            const newToken = await this.refreshPromise;
 
             // Update the original request with new token
-            originalRequest.headers.Authorization = `Bearer ${access_token}`;
-
-            // Process the failed queue - pass the token to retry all queued requests
-            this.processQueue(null, access_token);
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
 
             // Retry the original request
             return this.client(originalRequest);
           } catch (refreshError) {
-            // Refresh failed, clear auth and redirect
-            this.processQueue(refreshError, null);
-            this.clearAuthAndRedirect();
+            // Refresh failed
             return Promise.reject(refreshError);
-          } finally {
-            this.isRefreshing = false;
           }
         }
 
         return Promise.reject(error);
       }
     );
-  }
-
-  private processQueue(error: any, token: string | null) {
-    this.failedQueue.forEach((promise) => {
-      if (error) {
-        promise.reject(error);
-      } else {
-        // Resolve with the new token so queued requests can retry with it
-        promise.resolve(token);
-      }
-    });
-    this.failedQueue = [];
   }
 
   private clearAuthAndRedirect() {

@@ -73,7 +73,6 @@ Environment variables:
 
 | Variable | Description | Example Value
 |----------|-------------|---------|
-| `DB_PATH` | SQLite database file location | `./data` |
 | `JWT_SECRET` | JWT signing key (min 32 characters). You can generate one using `openssl rand -base64 32` | `9+RxeeHYEKAcpXbaVNy5YIU/Qk5Lr/uJ2J1tP16GayA=` |
 | `CLAUDE_API_KEY` | Anthropic Claude API key | `sk-ant...` |
 | `CLAUDE_MODEL` | Claude AI model to use | `claude-sonnet-4-20250514` |

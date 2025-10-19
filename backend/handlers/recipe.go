@@ -19,6 +19,7 @@ type RecipeHandler struct {
 	db                    *sql.DB
 	claudeService         *services.ClaudeService
 	openaiService         *services.OpenAIService
+	imageOptimizer        *services.ImageOptimizer
 	recipeGenerationLimit string
 }
 
@@ -28,6 +29,7 @@ func NewRecipeHandler(db *sql.DB, claudeAPIKey, claudeModel, openaiAPIKey, opena
 		db:                    db,
 		claudeService:         services.NewClaudeService(claudeAPIKey, claudeModel),
 		openaiService:         services.NewOpenAIService(openaiAPIKey, openaiModel),
+		imageOptimizer:        services.NewImageOptimizer("./uploads"),
 		recipeGenerationLimit: recipeGenerationLimit,
 	}
 }
@@ -115,12 +117,55 @@ func (h *RecipeHandler) GenerateRecipe(c *gin.Context) {
 
 	// Generate realistic food image using OpenAI DALL-E 3
 	imageDataURL, err := h.openaiService.GenerateFoodImage(recipe.Title, recipe.CuisineType, recipe.Description)
+	var optimizedImages *services.OptimizedImages
 	if err != nil {
-		// Log error but don't fail - use fallback
-		println("Warning: Failed to generate image:", err.Error())
-		imageDataURL = ""
+		// Log image generation failure
+		if logger != nil {
+			logger.Warn("recipe.image_generation_failed", "Failed to generate recipe image", &models.AuditContext{
+				RequestID: requestID,
+				UserID:    userID,
+				Metadata: map[string]interface{}{
+					"recipe_title": recipe.Title,
+					"error":        err.Error(),
+				},
+			})
+		}
+	} else if imageDataURL != "" {
+		// Optimize the generated image (resize and compress)
+		optimizedImages, err = h.imageOptimizer.OptimizeRecipeImage(imageDataURL)
+		if err != nil {
+			// Log optimization failure
+			if logger != nil {
+				logger.Warn("recipe.image_optimization_failed", "Failed to optimize recipe image", &models.AuditContext{
+					RequestID: requestID,
+					UserID:    userID,
+					Metadata: map[string]interface{}{
+						"recipe_title": recipe.Title,
+						"error":        err.Error(),
+					},
+				})
+			}
+			// Fallback to original URL if optimization fails
+			recipe.ImagePath = imageDataURL
+		} else {
+			// Use optimized image URLs
+			recipe.ImagePath = optimizedImages.FullImageURL
+			recipe.ThumbnailPath = optimizedImages.ThumbnailURL
+
+			// Log successful image optimization
+			if logger != nil {
+				logger.Info("recipe.image_optimized", "Recipe image optimized successfully", &models.AuditContext{
+					RequestID: requestID,
+					UserID:    userID,
+					Metadata: map[string]interface{}{
+						"recipe_title":    recipe.Title,
+						"full_image_path": optimizedImages.FullImagePath,
+						"thumbnail_path":  optimizedImages.ThumbnailPath,
+					},
+				})
+			}
+		}
 	}
-	recipe.ImagePath = imageDataURL
 
 	// Save recipe to database
 	recipeID := uuid.New().String()
@@ -150,12 +195,12 @@ func (h *RecipeHandler) GenerateRecipe(c *gin.Context) {
 		INSERT INTO recipes (
 			id, user_id, title, description, ingredients, steps,
 			cooking_time, difficulty, cuisine_type, meat_type,
-			dietary_tags, is_favorite, image_path
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+			dietary_tags, is_favorite, image_path, thumbnail_path
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
 	`, recipeID, userID, recipe.Title, recipe.Description,
 		string(ingredientsJSON), string(stepsJSON),
 		recipe.CookingTime, recipe.Difficulty, recipe.CuisineType,
-		recipe.MeatType, string(dietaryTagsJSON), recipe.ImagePath)
+		recipe.MeatType, string(dietaryTagsJSON), recipe.ImagePath, recipe.ThumbnailPath)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -189,7 +234,7 @@ func (h *RecipeHandler) GetRecipes(c *gin.Context) {
 	userID := c.GetString("user_id")
 
 	rows, err := h.db.Query(`
-		SELECT id, title, description, cuisine_type, difficulty, cooking_time, is_favorite, image_path, created_at
+		SELECT id, title, description, cuisine_type, difficulty, cooking_time, is_favorite, image_path, thumbnail_path, created_at
 		FROM recipes
 		WHERE user_id = ?
 		ORDER BY created_at DESC
@@ -202,26 +247,27 @@ func (h *RecipeHandler) GetRecipes(c *gin.Context) {
 
 	recipes := []gin.H{}
 	for rows.Next() {
-		var id, title, description, cuisineType, difficulty, imagePath string
+		var id, title, description, cuisineType, difficulty, imagePath, thumbnailPath string
 		var cookingTime int
 		var isFavorite bool
 		var createdAt string
 
-		err := rows.Scan(&id, &title, &description, &cuisineType, &difficulty, &cookingTime, &isFavorite, &imagePath, &createdAt)
+		err := rows.Scan(&id, &title, &description, &cuisineType, &difficulty, &cookingTime, &isFavorite, &imagePath, &thumbnailPath, &createdAt)
 		if err != nil {
 			continue
 		}
 
 		recipes = append(recipes, gin.H{
-			"id":           id,
-			"title":        title,
-			"description":  description,
-			"cuisine_type": cuisineType,
-			"difficulty":   difficulty,
-			"cooking_time": cookingTime,
-			"is_favorite":  isFavorite,
-			"image_path":   imagePath,
-			"created_at":   createdAt,
+			"id":             id,
+			"title":          title,
+			"description":    description,
+			"cuisine_type":   cuisineType,
+			"difficulty":     difficulty,
+			"cooking_time":   cookingTime,
+			"is_favorite":    isFavorite,
+			"image_path":     imagePath,
+			"thumbnail_path": thumbnailPath,
+			"created_at":     createdAt,
 		})
 	}
 
@@ -233,16 +279,16 @@ func (h *RecipeHandler) GetRecipe(c *gin.Context) {
 	recipeID := c.Param("id")
 	userID := c.GetString("user_id")
 
-	var id, title, description, ingredientsJSON, stepsJSON, cuisineType, meatType, difficulty, dietaryTagsJSON, imagePath string
+	var id, title, description, ingredientsJSON, stepsJSON, cuisineType, meatType, difficulty, dietaryTagsJSON, imagePath, thumbnailPath string
 	var cookingTime int
 	var isFavorite bool
 	var createdAt string
 
 	err := h.db.QueryRow(`
-		SELECT id, title, description, ingredients, steps, cuisine_type, meat_type, difficulty, dietary_tags, cooking_time, is_favorite, image_path, created_at
+		SELECT id, title, description, ingredients, steps, cuisine_type, meat_type, difficulty, dietary_tags, cooking_time, is_favorite, image_path, thumbnail_path, created_at
 		FROM recipes
 		WHERE id = ? AND user_id = ?
-	`, recipeID, userID).Scan(&id, &title, &description, &ingredientsJSON, &stepsJSON, &cuisineType, &meatType, &difficulty, &dietaryTagsJSON, &cookingTime, &isFavorite, &imagePath, &createdAt)
+	`, recipeID, userID).Scan(&id, &title, &description, &ingredientsJSON, &stepsJSON, &cuisineType, &meatType, &difficulty, &dietaryTagsJSON, &cookingTime, &isFavorite, &imagePath, &thumbnailPath, &createdAt)
 
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Recipe not found"})
@@ -263,19 +309,20 @@ func (h *RecipeHandler) GetRecipe(c *gin.Context) {
 	json.Unmarshal([]byte(dietaryTagsJSON), &dietaryTags)
 
 	recipe := models.RecipeDetail{
-		ID:          id,
-		UserID:      userID,
-		Title:       title,
-		Description: description,
-		Ingredients: ingredients,
-		Steps:       steps,
-		CookingTime: cookingTime,
-		Difficulty:  difficulty,
-		CuisineType: cuisineType,
-		MeatType:    meatType,
-		DietaryTags: dietaryTags,
-		IsFavorite:  isFavorite,
-		ImagePath:   imagePath,
+		ID:            id,
+		UserID:        userID,
+		Title:         title,
+		Description:   description,
+		Ingredients:   ingredients,
+		Steps:         steps,
+		CookingTime:   cookingTime,
+		Difficulty:    difficulty,
+		CuisineType:   cuisineType,
+		MeatType:      meatType,
+		DietaryTags:   dietaryTags,
+		IsFavorite:    isFavorite,
+		ImagePath:     imagePath,
+		ThumbnailPath: thumbnailPath,
 	}
 
 	c.JSON(http.StatusOK, recipe)

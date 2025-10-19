@@ -4,20 +4,21 @@ import "time"
 
 // Recipe represents a recipe in the database
 type Recipe struct {
-	ID          string    `json:"id"`
-	UserID      string    `json:"user_id"`
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	Ingredients string    `json:"ingredients"` // JSON encoded array
-	Steps       string    `json:"steps"`       // JSON encoded array
-	CookingTime int       `json:"cooking_time"` // minutes
-	Difficulty  string    `json:"difficulty"`
-	CuisineType string    `json:"cuisine_type"`
-	MeatType    string    `json:"meat_type"`
-	DietaryTags string    `json:"dietary_tags"` // JSON encoded array
-	IsFavorite  bool      `json:"is_favorite"`
-	ImagePath   string    `json:"image_path"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID            string    `json:"id"`
+	UserID        string    `json:"user_id"`
+	Title         string    `json:"title"`
+	Description   string    `json:"description"`
+	Ingredients   string    `json:"ingredients"`  // JSON encoded array
+	Steps         string    `json:"steps"`        // JSON encoded array
+	CookingTime   int       `json:"cooking_time"` // minutes
+	Difficulty    string    `json:"difficulty"`
+	CuisineType   string    `json:"cuisine_type"`
+	MeatType      string    `json:"meat_type"`
+	DietaryTags   string    `json:"dietary_tags"` // JSON encoded array
+	IsFavorite    bool      `json:"is_favorite"`
+	ImagePath     string    `json:"image_path"`
+	ThumbnailPath string    `json:"thumbnail_path"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 // RecipeGenerationRequest represents a recipe generation request
@@ -58,18 +59,19 @@ type CookingStep struct {
 
 // RecipeDetail represents the full recipe with parsed ingredients and steps
 type RecipeDetail struct {
-	ID          string        `json:"id"`
-	UserID      string        `json:"user_id"`
-	Title       string        `json:"title"`
-	Description string        `json:"description"`
-	Ingredients []Ingredient  `json:"ingredients"`
-	Steps       []CookingStep `json:"steps"`
-	CookingTime int           `json:"cooking_time"`
-	Difficulty  string        `json:"difficulty"`
-	CuisineType string        `json:"cuisine_type"`
-	MeatType    string        `json:"meat_type"`
-	DietaryTags []string      `json:"dietary_tags"`
-	IsFavorite  bool          `json:"is_favorite"`
-	ImagePath   string        `json:"image_path"`
-	CreatedAt   time.Time     `json:"created_at"`
+	ID            string        `json:"id"`
+	UserID        string        `json:"user_id"`
+	Title         string        `json:"title"`
+	Description   string        `json:"description"`
+	Ingredients   []Ingredient  `json:"ingredients"`
+	Steps         []CookingStep `json:"steps"`
+	CookingTime   int           `json:"cooking_time"`
+	Difficulty    string        `json:"difficulty"`
+	CuisineType   string        `json:"cuisine_type"`
+	MeatType      string        `json:"meat_type"`
+	DietaryTags   []string      `json:"dietary_tags"`
+	IsFavorite    bool          `json:"is_favorite"`
+	ImagePath     string        `json:"image_path"`
+	ThumbnailPath string        `json:"thumbnail_path"`
+	CreatedAt     time.Time     `json:"created_at"`
 }

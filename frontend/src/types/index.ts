@@ -52,6 +52,7 @@ export interface Recipe {
   dietary_tags: string[];
   is_favorite: boolean;
   image_path: string;
+  thumbnail_path: string;
   created_at: string;
 }
 
@@ -74,6 +75,7 @@ export interface RecipeSummary {
   cooking_time: number;
   is_favorite: boolean;
   image_path: string;
+  thumbnail_path: string;
   created_at: string;
 }
 

@@ -168,6 +168,9 @@ func main() {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
+	// Serve uploaded images (recipe images, thumbnails)
+	router.Static("/uploads", "./uploads")
+
 	// Serve embedded frontend for SPA routing
 	// Note: Frontend is always embedded in the binary after build
 	distFS, err := fs.Sub(frontendFS, "frontend/dist")

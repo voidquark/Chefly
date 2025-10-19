@@ -105,8 +105,8 @@ export const GenerateRecipe: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">{t.generate.title}</h1>
+    <div className="max-w-4xl mx-auto w-full">
+      <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">{t.generate.title}</h1>
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
@@ -115,15 +115,15 @@ export const GenerateRecipe: React.FC = () => {
       )}
 
       {generatedRecipe && (
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 px-4 py-3 rounded mb-6">
-          <div className="flex items-center justify-between">
-            <div>
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 px-3 sm:px-4 py-3 rounded mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="min-w-0 flex-1">
               <p className="font-semibold text-green-900 dark:text-green-200">{t.generate.successMessage}</p>
-              <p className="text-sm text-green-700 dark:text-green-300">{generatedRecipe.title}</p>
+              <p className="text-sm text-green-700 dark:text-green-300 truncate">{generatedRecipe.title}</p>
             </div>
             <button
               onClick={viewRecipe}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded transition-colors"
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded transition-colors whitespace-nowrap flex-shrink-0"
             >
               {t.generate.viewRecipe}
             </button>
@@ -131,7 +131,7 @@ export const GenerateRecipe: React.FC = () => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:p-6 w-full">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Meat Type */}
           <Select

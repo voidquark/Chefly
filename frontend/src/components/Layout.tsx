@@ -24,17 +24,17 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 w-full overflow-x-hidden">
       {/* Navigation Bar */}
-      <nav className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <Link to="/dashboard" className="flex items-center">
-                <ChefHat className="h-8 w-8 text-primary-600 dark:text-primary-400 mr-2" />
-                <span className="text-xl font-bold text-gray-900 dark:text-white">{t.nav.appName}</span>
+      <nav className="bg-white dark:bg-gray-800 shadow-sm w-full">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center min-w-0 flex-shrink">
+              <Link to="/dashboard" className="flex items-center min-w-0">
+                <ChefHat className="h-6 w-6 sm:h-8 sm:w-8 text-primary-600 dark:text-primary-400 mr-1 sm:mr-2 flex-shrink-0" />
+                <span className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white truncate">{t.nav.appName}</span>
               </Link>
-              <div className="hidden md:flex ml-10 space-x-4">
+              <div className="hidden md:flex ml-6 lg:ml-10 space-x-2 lg:space-x-4">
                 <Link
                   to="/generate"
                   className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -83,27 +83,25 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 )}
               </div>
             </div>
-            <div className="flex items-center space-x-2 sm:space-x-4">
+            <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
               <DarkModeToggle />
-              <div className="mr-2">
-                <LanguageSwitcher />
-              </div>
+              <LanguageSwitcher />
               <Link
                 to="/profile"
-                className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`flex items-center px-2 sm:px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   isActive('/profile')
                     ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
                     : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
               >
-                <User className="h-4 w-4 mr-2" />
+                <User className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">{user?.username}</span>
               </Link>
               <button
                 onClick={handleLogout}
-                className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                className="flex items-center px-2 sm:px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
               >
-                <LogOut className="h-4 w-4 mr-2" />
+                <LogOut className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">{t.nav.logout}</span>
               </button>
             </div>
@@ -175,7 +173,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       </nav>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">{children}</div>
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-8 w-full overflow-x-hidden">{children}</div>
     </div>
   );
 };

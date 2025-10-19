@@ -50,16 +50,14 @@ class APIClient {
         // If 401 and we haven't tried refreshing yet
         if (error.response?.status === 401 && !originalRequest._retry) {
           if (this.isRefreshing) {
-            // If already refreshing, queue this request
+            // If already refreshing, queue this request and wait for the refresh to complete
             return new Promise((resolve, reject) => {
               this.failedQueue.push({ resolve, reject });
-            })
-              .then(() => {
-                return this.client(originalRequest);
-              })
-              .catch((err) => {
-                return Promise.reject(err);
-              });
+            }).then((token) => {
+              // Update the request with the new token and retry
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+              return this.client(originalRequest);
+            });
           }
 
           originalRequest._retry = true;
@@ -88,14 +86,14 @@ class APIClient {
             // Update the original request with new token
             originalRequest.headers.Authorization = `Bearer ${access_token}`;
 
-            // Process the failed queue
-            this.processQueue(null);
+            // Process the failed queue - pass the token to retry all queued requests
+            this.processQueue(null, access_token);
 
             // Retry the original request
             return this.client(originalRequest);
           } catch (refreshError) {
             // Refresh failed, clear auth and redirect
-            this.processQueue(refreshError);
+            this.processQueue(refreshError, null);
             this.clearAuthAndRedirect();
             return Promise.reject(refreshError);
           } finally {
@@ -108,12 +106,13 @@ class APIClient {
     );
   }
 
-  private processQueue(error: any) {
+  private processQueue(error: any, token: string | null) {
     this.failedQueue.forEach((promise) => {
       if (error) {
         promise.reject(error);
       } else {
-        promise.resolve();
+        // Resolve with the new token so queued requests can retry with it
+        promise.resolve(token);
       }
     });
     this.failedQueue = [];

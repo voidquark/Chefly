@@ -119,19 +119,51 @@ func (h *RecipeHandler) GenerateRecipe(c *gin.Context) {
 	imageDataURL, err := h.openaiService.GenerateFoodImage(recipe.Title, recipe.CuisineType, recipe.Description)
 	var optimizedImages *services.OptimizedImages
 	if err != nil {
-		// Log error but don't fail - use fallback
-		println("Warning: Failed to generate image:", err.Error())
+		// Log image generation failure
+		if logger != nil {
+			logger.Warn("recipe.image_generation_failed", "Failed to generate recipe image", &models.AuditContext{
+				RequestID: requestID,
+				UserID:    userID,
+				Metadata: map[string]interface{}{
+					"recipe_title": recipe.Title,
+					"error":        err.Error(),
+				},
+			})
+		}
 	} else if imageDataURL != "" {
 		// Optimize the generated image (resize and compress)
 		optimizedImages, err = h.imageOptimizer.OptimizeRecipeImage(imageDataURL)
 		if err != nil {
-			println("Warning: Failed to optimize image:", err.Error())
+			// Log optimization failure
+			if logger != nil {
+				logger.Warn("recipe.image_optimization_failed", "Failed to optimize recipe image", &models.AuditContext{
+					RequestID: requestID,
+					UserID:    userID,
+					Metadata: map[string]interface{}{
+						"recipe_title": recipe.Title,
+						"error":        err.Error(),
+					},
+				})
+			}
 			// Fallback to original URL if optimization fails
 			recipe.ImagePath = imageDataURL
 		} else {
 			// Use optimized image URLs
 			recipe.ImagePath = optimizedImages.FullImageURL
 			recipe.ThumbnailPath = optimizedImages.ThumbnailURL
+
+			// Log successful image optimization
+			if logger != nil {
+				logger.Info("recipe.image_optimized", "Recipe image optimized successfully", &models.AuditContext{
+					RequestID: requestID,
+					UserID:    userID,
+					Metadata: map[string]interface{}{
+						"recipe_title":    recipe.Title,
+						"full_image_path": optimizedImages.FullImagePath,
+						"thumbnail_path":  optimizedImages.ThumbnailPath,
+					},
+				})
+			}
 		}
 	}
 

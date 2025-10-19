@@ -2,6 +2,7 @@ package services
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/disintegration/imaging"
 	"github.com/google/uuid"
@@ -36,22 +38,40 @@ func NewImageOptimizer(uploadsDir string) *ImageOptimizer {
 
 // OptimizeRecipeImage downloads and optimizes a recipe image from DALL-E
 // Returns both full-size (800x800) and thumbnail (200x200) JPEG images
+// Supports both HTTP URLs and base64 data URLs
 func (opt *ImageOptimizer) OptimizeRecipeImage(imageURL string) (*OptimizedImages, error) {
-	// Download the image from DALL-E
-	resp, err := http.Get(imageURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to download image: %w", err)
-	}
-	defer resp.Body.Close()
+	var imageData []byte
+	var err error
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to download image: status code %d", resp.StatusCode)
-	}
+	// Check if it's a data URL (base64 encoded)
+	if strings.HasPrefix(imageURL, "data:image/") {
+		// Extract base64 data from data URL
+		// Format: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...
+		parts := strings.Split(imageURL, ",")
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid data URL format")
+		}
 
-	// Read image data
-	imageData, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read image data: %w", err)
+		imageData, err = base64.StdEncoding.DecodeString(parts[1])
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode base64 image: %w", err)
+		}
+	} else {
+		// Regular HTTP URL - download the image
+		resp, err := http.Get(imageURL)
+		if err != nil {
+			return nil, fmt.Errorf("failed to download image: %w", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("failed to download image: status code %d", resp.StatusCode)
+		}
+
+		imageData, err = ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read image data: %w", err)
+		}
 	}
 
 	// Decode the image (supports PNG, JPEG, WebP)

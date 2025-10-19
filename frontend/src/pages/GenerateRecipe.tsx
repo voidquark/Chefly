@@ -70,6 +70,12 @@ export const GenerateRecipe: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Prevent multiple submissions
+    if (loading) {
+      return;
+    }
+
     setError('');
     setLoading(true);
     setGeneratedRecipe(null);

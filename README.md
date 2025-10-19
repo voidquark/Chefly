@@ -1,5 +1,7 @@
 # Chefly - AI Powered Recipe Generator
 
+[![License](https://img.shields.io/github/license/voidquark/chefly)](LICENSE)
+
 Chefly is a high-quality recipe generator powered by Claude AI.
 
 **Features:**
@@ -7,7 +9,7 @@ Chefly is a high-quality recipe generator powered by Claude AI.
   -	Mobile first UI design
   - Share recipes via public link
   - Mark favorite recipes, filter them, or delete unwanted ones
-  - Filter recipes by meat type, cuisine, dietary preferences, difficulty, and preparation time
+  - Generate recipes by meat type, cuisine, dietary preferences, difficulty, and preparation time
   - Admin panel to manage registered users and set recipe generation limits per user
   - Generate shopping lists from recipes to easily bookmark ingredients
   - Audit logging of every request in json or pretty format
@@ -38,30 +40,29 @@ Breaking changes may occur at any time and without notice.
 
 1. Obtain an API key from the Anthropic console for Claude AI.
 2. Obtain an API key from the OpenAI console for DALL·E 3
-3. Create a folder to store your SQLite database (e.g. in the current directory: `mkdir data`).
+3. Create a folder to store your SQLite database (e.g. in the current directory: `mkdir chefly_data`).
 4. Run the container as a regular user in a user namespace:
 
 ```bash
 podman run -d \
   --name chefly \
   --restart unless-stopped \
-  --userns=keep-id \
+  --userns=keep-id:uid=1000,gid=1000 \
   -p 8080:8080 \
-  -v ./data:/app/data:Z \
+  -v ./chefly_data:/app/data:Z \
   -e JWT_SECRET="your-minimum-32-characters-signing-key" \
-  -e DB_PATH="./data" \
   -e CLAUDE_API_KEY="sk-ant..." \
   -e CLAUDE_MODEL="claude-sonnet-4-20250514" \
   -e OPENAI_API_KEY="sk-..." \
   -e OPENAI_MODEL="dall-e-3" \
-  -e REGISTRATION_ENABLED="true" \
+  -e REGISTRATION_ENABLED=true \
   -e RECIPE_GENERATION_LIMIT="unlimited" \
   -e AUDIT_LOG_ENABLED=true \
   -e AUDIT_LOG_LEVEL="info" \
   -e AUDIT_LOG_FORMAT="json" \
   --security-opt=no-new-privileges \
   --cap-drop=ALL \
-  chefly:latest
+  voidquark/chefly:latest
 ```
 
 5. The first registered user becomes the admin. This cannot be changed without directly modifying the database.
@@ -84,6 +85,9 @@ Environment variables:
 | `AUDIT_LOG_LEVEL` | Audit log level (`debug`, `info`, `warn`, `error`) | `info` |
 | `AUDIT_LOG_FORMAT` | Log format (`json` or `pretty`) | `json` |
 
+> [!NOTE]
+> The container uses the `chefly` user (`UID 1000`, `GID 1000`) inside.
+If you experience permission issues with bind mounts, it’s likely due to this user mapping.
 
 ## Audit Logging
 

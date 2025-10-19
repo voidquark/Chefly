@@ -5,10 +5,13 @@ on:
     branches:
       - main
       - dev
-  pull_request:
-    branches:
-      - main
-      - dev
+    paths-ignore:
+      - 'README.md'
+      - 'LICENSE'
+      - 'podman-build.sh'
+      - 'container-run.sh'
+  release:
+    types: [created]
 
 jobs:
   build-and-push:
@@ -20,6 +23,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -36,9 +41,9 @@ jobs:
         with:
           images: voidquark/chefly
           tags: |
-            type=raw,value=latest,branch=main
-            type=sha,format=short
-            type=raw,value=dev,branch=dev
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=dev,enable=${{ github.ref == 'refs/heads/dev' }}
+            type=semver,pattern={{version}}
 
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5

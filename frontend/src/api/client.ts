@@ -18,11 +18,19 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 class APIClient {
   private client: AxiosInstance;
-  private isRefreshing = false;
   private refreshPromise: Promise<string> | null = null;
+  private retryClient: AxiosInstance;
 
   constructor() {
     this.client = axios.create({
+      baseURL: `${API_BASE_URL}/api`,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    // Create a separate axios instance for retries (without interceptors)
+    this.retryClient = axios.create({
       baseURL: `${API_BASE_URL}/api`,
       headers: {
         'Content-Type': 'application/json',
@@ -52,56 +60,43 @@ class APIClient {
           // Mark this request as being retried to prevent infinite loops
           originalRequest._isRetry = true;
 
-          // If a refresh is already in progress, wait for it
-          if (this.isRefreshing && this.refreshPromise) {
-            try {
-              const newToken = await this.refreshPromise;
-              // Update the request with the new token and retry
-              originalRequest.headers.Authorization = `Bearer ${newToken}`;
-              return this.client(originalRequest);
-            } catch (refreshError) {
-              // Refresh failed, reject this request
-              return Promise.reject(refreshError);
-            }
-          }
+          // Get or create the refresh promise
+          if (!this.refreshPromise) {
+            const refreshToken = localStorage.getItem('refresh_token');
 
-          // Start a new token refresh
-          this.isRefreshing = true;
-          const refreshToken = localStorage.getItem('refresh_token');
-
-          if (!refreshToken) {
-            // No refresh token, redirect to login
-            this.isRefreshing = false;
-            this.refreshPromise = null;
-            this.clearAuthAndRedirect();
-            return Promise.reject(error);
-          }
-
-          // Create a promise that all waiting requests can share
-          this.refreshPromise = (async () => {
-            try {
-              // Try to refresh the token
-              const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
-                refresh_token: refreshToken,
-              });
-
-              const { access_token, refresh_token: newRefreshToken } = response.data;
-
-              // Store new tokens
-              localStorage.setItem('access_token', access_token);
-              localStorage.setItem('refresh_token', newRefreshToken);
-
-              return access_token;
-            } catch (refreshError) {
-              // Refresh failed, clear auth and redirect
+            if (!refreshToken) {
+              // No refresh token, redirect to login
               this.clearAuthAndRedirect();
-              throw refreshError;
-            } finally {
-              // Reset refresh state
-              this.isRefreshing = false;
-              this.refreshPromise = null;
+              return Promise.reject(error);
             }
-          })();
+
+            // Create a promise that all waiting requests can share
+            this.refreshPromise = (async () => {
+              try {
+                // Try to refresh the token using a separate axios instance (no interceptors)
+                const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
+                  refresh_token: refreshToken,
+                });
+
+                const { access_token, refresh_token: newRefreshToken } = response.data;
+
+                // Store new tokens
+                localStorage.setItem('access_token', access_token);
+                localStorage.setItem('refresh_token', newRefreshToken);
+
+                return access_token;
+              } catch (refreshError) {
+                // Refresh failed, clear auth and redirect
+                this.clearAuthAndRedirect();
+                throw refreshError;
+              } finally {
+                // Reset refresh state after a small delay to allow all pending requests to grab the promise
+                setTimeout(() => {
+                  this.refreshPromise = null;
+                }, 100);
+              }
+            })();
+          }
 
           try {
             // Wait for the token refresh to complete
@@ -110,8 +105,8 @@ class APIClient {
             // Update the original request with new token
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
 
-            // Retry the original request
-            return this.client(originalRequest);
+            // Retry the original request using the retry client (bypasses interceptors completely)
+            return this.retryClient.request(originalRequest);
           } catch (refreshError) {
             // Refresh failed
             return Promise.reject(refreshError);

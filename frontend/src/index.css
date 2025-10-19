@@ -29,13 +29,42 @@
   @apply bg-gray-400 dark:bg-gray-600;
 }
 
-body {
+html, body {
   margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
+  /* Light mode background - fixes white overscroll areas on iOS */
+  background-color: #f9fafb;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* System dark mode preference - fixes dark mode overscroll areas */
+@media (prefers-color-scheme: dark) {
+  html, body {
+    background-color: #111827;
+  }
+}
+
+/* Chefly app dark mode toggle (when user manually enables dark mode) */
+html.dark,
+html.dark body {
+  background-color: #111827 !important;
+}
+
+/* Chefly app light mode toggle (when user manually disables dark mode) */
+html.light,
+html.light body {
+  background-color: #f9fafb !important;
+}
+
+#root {
+  width: 100%;
+  overflow-x: hidden;
 }
 
 code {

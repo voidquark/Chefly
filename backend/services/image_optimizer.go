@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"image"
 	"image/jpeg"
-	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -35,8 +35,8 @@ func NewImageOptimizer(uploadsDir string) *ImageOptimizer {
 }
 
 // OptimizeRecipeImage downloads and optimizes a recipe image from DALL-E
-// Returns both full-size (800x800) and thumbnail (200x200) WebP images
-func (io *ImageOptimizer) OptimizeRecipeImage(imageURL string) (*OptimizedImages, error) {
+// Returns both full-size (800x800) and thumbnail (200x200) JPEG images
+func (opt *ImageOptimizer) OptimizeRecipeImage(imageURL string) (*OptimizedImages, error) {
 	// Download the image from DALL-E
 	resp, err := http.Get(imageURL)
 	if err != nil {
@@ -49,7 +49,7 @@ func (io *ImageOptimizer) OptimizeRecipeImage(imageURL string) (*OptimizedImages
 	}
 
 	// Read image data
-	imageData, err := io.ReadAll(resp.Body)
+	imageData, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read image data: %w", err)
 	}
@@ -64,8 +64,8 @@ func (io *ImageOptimizer) OptimizeRecipeImage(imageURL string) (*OptimizedImages
 	imageID := uuid.New().String()
 
 	// Create directories if they don't exist
-	fullDir := filepath.Join(io.uploadsDir, "images", "full")
-	thumbDir := filepath.Join(io.uploadsDir, "images", "thumbnails")
+	fullDir := filepath.Join(opt.uploadsDir, "images", "full")
+	thumbDir := filepath.Join(opt.uploadsDir, "images", "thumbnails")
 
 	if err := os.MkdirAll(fullDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create full images directory: %w", err)
@@ -79,7 +79,7 @@ func (io *ImageOptimizer) OptimizeRecipeImage(imageURL string) (*OptimizedImages
 	fullImageFilename := fmt.Sprintf("%s.jpg", imageID)
 	fullImagePath := filepath.Join(fullDir, fullImageFilename)
 
-	if err := io.createOptimizedImage(img, fullImagePath, 800, 85); err != nil {
+	if err := opt.createOptimizedImage(img, fullImagePath, 800, 85); err != nil {
 		return nil, fmt.Errorf("failed to create full-size image: %w", err)
 	}
 
@@ -87,7 +87,7 @@ func (io *ImageOptimizer) OptimizeRecipeImage(imageURL string) (*OptimizedImages
 	thumbFilename := fmt.Sprintf("%s_thumb.jpg", imageID)
 	thumbPath := filepath.Join(thumbDir, thumbFilename)
 
-	if err := io.createOptimizedImage(img, thumbPath, 200, 75); err != nil {
+	if err := opt.createOptimizedImage(img, thumbPath, 200, 75); err != nil {
 		return nil, fmt.Errorf("failed to create thumbnail: %w", err)
 	}
 
@@ -104,7 +104,7 @@ func (io *ImageOptimizer) OptimizeRecipeImage(imageURL string) (*OptimizedImages
 }
 
 // createOptimizedImage resizes and saves an image as JPEG
-func (io *ImageOptimizer) createOptimizedImage(img image.Image, outputPath string, size int, quality int) error {
+func (opt *ImageOptimizer) createOptimizedImage(img image.Image, outputPath string, size int, quality int) error {
 	// Resize image maintaining aspect ratio (will be square for recipe images)
 	resized := imaging.Fill(img, size, size, imaging.Center, imaging.Lanczos)
 

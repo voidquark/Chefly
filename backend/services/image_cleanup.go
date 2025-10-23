@@ -2,7 +2,6 @@ package services
 
 import (
 	"os"
-	"path/filepath"
 	"strings"
 
 	"chefly/models"
@@ -23,30 +22,33 @@ func NewImageCleanupService(uploadsDir string, auditLogger *AuditLogger) *ImageC
 }
 
 // DeleteRecipeImages deletes the full image and thumbnail for a recipe
-// Returns error only for critical failures; missing files are logged as warnings
+// Always logs cleanup attempts for audit trail
 func (s *ImageCleanupService) DeleteRecipeImages(imagePath, thumbnailPath, recipeID, userID, requestID string) error {
 	deletedFiles := []string{}
 	failedFiles := []string{}
+	var errors []string
 
 	// Delete full image
 	if imagePath != "" && !strings.HasPrefix(imagePath, "data:") {
 		fullPath := s.getAbsolutePath(imagePath)
 		if err := os.Remove(fullPath); err != nil {
-			if !os.IsNotExist(err) {
-				failedFiles = append(failedFiles, imagePath)
-				if s.auditLogger != nil {
-					s.auditLogger.Warn("recipe.image_cleanup_failed", "Failed to delete recipe image file", &models.AuditContext{
-						RequestID: requestID,
-						UserID:    userID,
-						Metadata: map[string]interface{}{
-							"recipe_id":  recipeID,
-							"image_path": imagePath,
-							"error":      err.Error(),
-						},
-					})
-				}
+			failedFiles = append(failedFiles, imagePath)
+			errors = append(errors, err.Error())
+
+			// Always log failure (even if file doesn't exist - could be wrong path)
+			if s.auditLogger != nil {
+				s.auditLogger.Warn("recipe.image_cleanup_failed", "Failed to delete recipe image file", &models.AuditContext{
+					RequestID: requestID,
+					UserID:    userID,
+					Metadata: map[string]interface{}{
+						"recipe_id":       recipeID,
+						"image_url":       imagePath,
+						"filesystem_path": fullPath,
+						"error":           err.Error(),
+						"is_not_exist":    os.IsNotExist(err),
+					},
+				})
 			}
-			// File doesn't exist - not an error, just skip
 		} else {
 			deletedFiles = append(deletedFiles, imagePath)
 		}
@@ -56,39 +58,80 @@ func (s *ImageCleanupService) DeleteRecipeImages(imagePath, thumbnailPath, recip
 	if thumbnailPath != "" && !strings.HasPrefix(thumbnailPath, "data:") {
 		thumbPath := s.getAbsolutePath(thumbnailPath)
 		if err := os.Remove(thumbPath); err != nil {
-			if !os.IsNotExist(err) {
-				failedFiles = append(failedFiles, thumbnailPath)
-				if s.auditLogger != nil {
-					s.auditLogger.Warn("recipe.image_cleanup_failed", "Failed to delete recipe thumbnail file", &models.AuditContext{
-						RequestID: requestID,
-						UserID:    userID,
-						Metadata: map[string]interface{}{
-							"recipe_id":      recipeID,
-							"thumbnail_path": thumbnailPath,
-							"error":          err.Error(),
-						},
-					})
-				}
+			failedFiles = append(failedFiles, thumbnailPath)
+			errors = append(errors, err.Error())
+
+			// Always log failure
+			if s.auditLogger != nil {
+				s.auditLogger.Warn("recipe.image_cleanup_failed", "Failed to delete recipe thumbnail file", &models.AuditContext{
+					RequestID: requestID,
+					UserID:    userID,
+					Metadata: map[string]interface{}{
+						"recipe_id":       recipeID,
+						"thumbnail_url":   thumbnailPath,
+						"filesystem_path": thumbPath,
+						"error":           err.Error(),
+						"is_not_exist":    os.IsNotExist(err),
+					},
+				})
 			}
-			// File doesn't exist - not an error, just skip
 		} else {
 			deletedFiles = append(deletedFiles, thumbnailPath)
 		}
 	}
 
-	// Log successful cleanup if any files were deleted
-	if len(deletedFiles) > 0 && s.auditLogger != nil {
-		s.auditLogger.Info("recipe.image_cleanup", "Recipe images deleted from disk", &models.AuditContext{
-			RequestID: requestID,
-			UserID:    userID,
-			Metadata: map[string]interface{}{
-				"recipe_id":      recipeID,
-				"deleted_files":  deletedFiles,
-				"deleted_count":  len(deletedFiles),
-				"failed_files":   failedFiles,
-				"cleanup_success": len(failedFiles) == 0,
-			},
-		})
+	// Always log cleanup attempt (success, partial, or total failure)
+	if s.auditLogger != nil {
+		totalAttempted := 0
+		if imagePath != "" && !strings.HasPrefix(imagePath, "data:") {
+			totalAttempted++
+		}
+		if thumbnailPath != "" && !strings.HasPrefix(thumbnailPath, "data:") {
+			totalAttempted++
+		}
+
+		if len(failedFiles) > 0 && len(deletedFiles) == 0 {
+			// Total failure - all files failed to delete
+			s.auditLogger.Error("recipe.image_cleanup_total_failure", "All recipe images failed to delete", nil, &models.AuditContext{
+				RequestID: requestID,
+				UserID:    userID,
+				Metadata: map[string]interface{}{
+					"recipe_id":       recipeID,
+					"attempted_count": totalAttempted,
+					"failed_count":    len(failedFiles),
+					"failed_files":    failedFiles,
+					"errors":          errors,
+				},
+			})
+		} else if len(deletedFiles) > 0 && len(failedFiles) > 0 {
+			// Partial success
+			s.auditLogger.Warn("recipe.image_cleanup_partial", "Some recipe images failed to delete", &models.AuditContext{
+				RequestID: requestID,
+				UserID:    userID,
+				Metadata: map[string]interface{}{
+					"recipe_id":       recipeID,
+					"attempted_count": totalAttempted,
+					"deleted_count":   len(deletedFiles),
+					"deleted_files":   deletedFiles,
+					"failed_count":    len(failedFiles),
+					"failed_files":    failedFiles,
+					"cleanup_success": false,
+				},
+			})
+		} else if len(deletedFiles) > 0 {
+			// Complete success
+			s.auditLogger.Info("recipe.image_cleanup", "Recipe images deleted from disk", &models.AuditContext{
+				RequestID: requestID,
+				UserID:    userID,
+				Metadata: map[string]interface{}{
+					"recipe_id":       recipeID,
+					"deleted_count":   len(deletedFiles),
+					"deleted_files":   deletedFiles,
+					"cleanup_success": true,
+				},
+			})
+		}
+		// Note: If totalAttempted == 0 (no images to delete), we don't log anything
 	}
 
 	return nil
@@ -97,18 +140,20 @@ func (s *ImageCleanupService) DeleteRecipeImages(imagePath, thumbnailPath, recip
 // DeleteUserImages deletes all image files for a user's recipes
 // Takes a list of recipe image paths and deletes them in bulk
 func (s *ImageCleanupService) DeleteUserImages(recipes []struct{ ImagePath, ThumbnailPath, RecipeID string }, userID, requestID string) error {
+	totalAttempted := 0
 	totalDeleted := 0
 	totalFailed := 0
 	deletedFiles := []string{}
+	failedFiles := []string{}
 
 	for _, recipe := range recipes {
 		// Delete full image
 		if recipe.ImagePath != "" && !strings.HasPrefix(recipe.ImagePath, "data:") {
+			totalAttempted++
 			fullPath := s.getAbsolutePath(recipe.ImagePath)
 			if err := os.Remove(fullPath); err != nil {
-				if !os.IsNotExist(err) {
-					totalFailed++
-				}
+				totalFailed++
+				failedFiles = append(failedFiles, recipe.ImagePath)
 			} else {
 				totalDeleted++
 				deletedFiles = append(deletedFiles, recipe.ImagePath)
@@ -117,11 +162,11 @@ func (s *ImageCleanupService) DeleteUserImages(recipes []struct{ ImagePath, Thum
 
 		// Delete thumbnail
 		if recipe.ThumbnailPath != "" && !strings.HasPrefix(recipe.ThumbnailPath, "data:") {
+			totalAttempted++
 			thumbPath := s.getAbsolutePath(recipe.ThumbnailPath)
 			if err := os.Remove(thumbPath); err != nil {
-				if !os.IsNotExist(err) {
-					totalFailed++
-				}
+				totalFailed++
+				failedFiles = append(failedFiles, recipe.ThumbnailPath)
 			} else {
 				totalDeleted++
 				deletedFiles = append(deletedFiles, recipe.ThumbnailPath)
@@ -129,28 +174,47 @@ func (s *ImageCleanupService) DeleteUserImages(recipes []struct{ ImagePath, Thum
 		}
 	}
 
-	// Log cleanup results
-	if s.auditLogger != nil {
-		if totalFailed > 0 {
-			s.auditLogger.Warn("admin.user_images_cleanup", "User images cleanup completed with failures", &models.AuditContext{
+	// Always log cleanup results for user deletion
+	if s.auditLogger != nil && totalAttempted > 0 {
+		if totalFailed > 0 && totalDeleted == 0 {
+			// Total failure
+			s.auditLogger.Error("admin.user_images_cleanup_failed", "All user images failed to delete", nil, &models.AuditContext{
 				RequestID: requestID,
 				UserID:    userID,
 				Metadata: map[string]interface{}{
-					"deleted_user_id":   userID,
-					"recipe_count":      len(recipes),
-					"files_deleted":     totalDeleted,
-					"files_failed":      totalFailed,
-					"cleanup_success":   totalFailed == 0,
+					"deleted_user_id": userID,
+					"recipe_count":    len(recipes),
+					"attempted_count": totalAttempted,
+					"failed_count":    totalFailed,
+					"failed_files":    failedFiles,
+					"cleanup_success": false,
+				},
+			})
+		} else if totalFailed > 0 {
+			// Partial success
+			s.auditLogger.Warn("admin.user_images_cleanup_partial", "Some user images failed to delete", &models.AuditContext{
+				RequestID: requestID,
+				UserID:    userID,
+				Metadata: map[string]interface{}{
+					"deleted_user_id": userID,
+					"recipe_count":    len(recipes),
+					"attempted_count": totalAttempted,
+					"deleted_count":   totalDeleted,
+					"failed_count":    totalFailed,
+					"failed_files":    failedFiles,
+					"cleanup_success": false,
 				},
 			})
 		} else if totalDeleted > 0 {
+			// Complete success
 			s.auditLogger.Info("admin.user_images_cleanup", "All user images deleted from disk", &models.AuditContext{
 				RequestID: requestID,
 				UserID:    userID,
 				Metadata: map[string]interface{}{
 					"deleted_user_id": userID,
 					"recipe_count":    len(recipes),
-					"files_deleted":   totalDeleted,
+					"attempted_count": totalAttempted,
+					"deleted_count":   totalDeleted,
 					"cleanup_success": true,
 				},
 			})
@@ -161,10 +225,9 @@ func (s *ImageCleanupService) DeleteUserImages(recipes []struct{ ImagePath, Thum
 }
 
 // getAbsolutePath converts a URL path to absolute filesystem path
-// Handles paths like "/uploads/images/full/abc.jpg" -> "./uploads/images/full/abc.jpg"
+// URL format: /uploads/images/full/abc.jpg → ./uploads/images/full/abc.jpg
 func (s *ImageCleanupService) getAbsolutePath(urlPath string) string {
-	// Remove leading slash if present
-	cleanPath := strings.TrimPrefix(urlPath, "/")
-	// Join with uploads directory
-	return filepath.Join(s.uploadsDir, cleanPath)
+	// Simply prepend "." to convert URL path to relative filesystem path
+	// This works because the URL already includes the full path structure
+	return "." + urlPath
 }

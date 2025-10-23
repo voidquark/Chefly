@@ -41,7 +41,19 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onToggleFavorite
             }`}
             onLoad={() => setImageLoaded(true)}
             onError={(e) => {
-              (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300/FF6B6B/FFFFFF?text=' + encodeURIComponent(recipe.title);
+              const target = e.target as HTMLImageElement;
+              // Prevent infinite loop - only set fallback once
+              if (!target.dataset.fallbackSet) {
+                target.dataset.fallbackSet = 'true';
+                // Use inline SVG with emoji instead of external placeholder
+                target.src = `data:image/svg+xml,${encodeURIComponent(`
+                  <svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+                    <rect width="400" height="300" fill="#f3f4f6"/>
+                    <text x="50%" y="50%" font-size="80" text-anchor="middle" dy=".3em">🍽️</text>
+                    <text x="50%" y="70%" font-size="16" text-anchor="middle" fill="#6b7280">${recipe.title}</text>
+                  </svg>
+                `)}`;
+              }
               setImageLoaded(true);
             }}
           />

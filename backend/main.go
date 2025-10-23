@@ -92,9 +92,9 @@ func main() {
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(db, cfg.JWTSecret, cfg.RegistrationEnabled)
-	recipeHandler := handlers.NewRecipeHandler(db, cfg.ClaudeAPIKey, cfg.ClaudeModel, cfg.OpenAIAPIKey, cfg.OpenAIModel, cfg.RecipeGenerationLimit)
+	recipeHandler := handlers.NewRecipeHandler(db, cfg.ClaudeAPIKey, cfg.ClaudeModel, cfg.OpenAIAPIKey, cfg.OpenAIModel, cfg.RecipeGenerationLimit, auditLogger)
 	shoppingListHandler := handlers.NewShoppingListHandler(db)
-	adminHandler := handlers.NewAdminHandler(db)
+	adminHandler := handlers.NewAdminHandler(db, auditLogger)
 
 	// Public routes
 	api := router.Group("/api")

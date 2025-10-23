@@ -40,7 +40,7 @@ Breaking changes may occur at any time and without notice.
 
 1. Obtain an API key from the Anthropic console for Claude AI.
 2. Obtain an API key from the OpenAI console for DALL·E 3
-3. Create a folder to store your SQLite database (e.g. in the current directory: `mkdir chefly_data`).
+3. Create folders for data storage (e.g. in the current directory: `mkdir chefly_data chefly_uploads`).
 4. Run the container as a regular user in a user namespace:
 
 ```bash
@@ -50,6 +50,7 @@ podman run -d \
   --userns=keep-id:uid=1000,gid=1000 \
   -p 8080:8080 \
   -v ./chefly_data:/app/data:Z \
+  -v ./chefly_uploads:/app/uploads:Z \
   -e JWT_SECRET="your-minimum-32-characters-signing-key" \
   -e CLAUDE_API_KEY="sk-ant..." \
   -e CLAUDE_MODEL="claude-sonnet-4-20250514" \

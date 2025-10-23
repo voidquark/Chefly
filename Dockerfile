@@ -30,7 +30,7 @@ RUN addgroup -g ${USER_GID} chefly && \
     adduser -D -u ${USER_UID} -G chefly -h /app -s /bin/sh chefly
 WORKDIR /app
 COPY --from=backend-builder /build/backend/chefly .
-RUN mkdir -p /app/data && \
+RUN mkdir -p /app/data /app/uploads && \
     chown -R chefly:chefly /app
 USER chefly:chefly
 EXPOSE 8080

@@ -13,12 +13,16 @@ import (
 
 // AdminHandler handles admin operations
 type AdminHandler struct {
-	db *sql.DB
+	db           *sql.DB
+	imageCleanup *services.ImageCleanupService
 }
 
 // NewAdminHandler creates a new admin handler
-func NewAdminHandler(db *sql.DB) *AdminHandler {
-	return &AdminHandler{db: db}
+func NewAdminHandler(db *sql.DB, auditLogger *services.AuditLogger) *AdminHandler {
+	return &AdminHandler{
+		db:           db,
+		imageCleanup: services.NewImageCleanupService("./uploads", auditLogger),
+	}
 }
 
 // UserWithStats represents a user with additional statistics
@@ -152,6 +156,22 @@ func (h *AdminHandler) DeleteUser(c *gin.Context) {
 	h.db.QueryRow("SELECT COUNT(*) FROM recipes WHERE user_id = ?", userID).Scan(&recipeCount)
 	h.db.QueryRow("SELECT COUNT(*) FROM shopping_list_items WHERE user_id = ?", userID).Scan(&shoppingCount)
 
+	// Get all user's recipe images before deletion (for cleanup)
+	rows, _ := h.db.Query("SELECT id, image_path, thumbnail_path FROM recipes WHERE user_id = ?", userID)
+	var recipeImages []struct{ ImagePath, ThumbnailPath, RecipeID string }
+	if rows != nil {
+		defer rows.Close()
+		for rows.Next() {
+			var recipeID, imgPath, thumbPath string
+			rows.Scan(&recipeID, &imgPath, &thumbPath)
+			recipeImages = append(recipeImages, struct{ ImagePath, ThumbnailPath, RecipeID string }{
+				ImagePath:     imgPath,
+				ThumbnailPath: thumbPath,
+				RecipeID:      recipeID,
+			})
+		}
+	}
+
 	// Check if user exists
 	var exists bool
 	err := h.db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE id = ?)", userID).Scan(&exists)
@@ -175,6 +195,11 @@ func (h *AdminHandler) DeleteUser(c *gin.Context) {
 	if rowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
+	}
+
+	// Delete all user's image files after successful database deletion
+	if rowsAffected > 0 && len(recipeImages) > 0 {
+		h.imageCleanup.DeleteUserImages(recipeImages, userID, requestID)
 	}
 
 	// Log user deletion by admin

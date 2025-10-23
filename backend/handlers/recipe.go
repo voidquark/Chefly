@@ -20,16 +20,18 @@ type RecipeHandler struct {
 	claudeService         *services.ClaudeService
 	openaiService         *services.OpenAIService
 	imageOptimizer        *services.ImageOptimizer
+	imageCleanup          *services.ImageCleanupService
 	recipeGenerationLimit string
 }
 
 // NewRecipeHandler creates a new recipe handler
-func NewRecipeHandler(db *sql.DB, claudeAPIKey, claudeModel, openaiAPIKey, openaiModel, recipeGenerationLimit string) *RecipeHandler {
+func NewRecipeHandler(db *sql.DB, claudeAPIKey, claudeModel, openaiAPIKey, openaiModel, recipeGenerationLimit string, auditLogger *services.AuditLogger) *RecipeHandler {
 	return &RecipeHandler{
 		db:                    db,
 		claudeService:         services.NewClaudeService(claudeAPIKey, claudeModel),
 		openaiService:         services.NewOpenAIService(openaiAPIKey, openaiModel),
 		imageOptimizer:        services.NewImageOptimizer("./uploads"),
+		imageCleanup:          services.NewImageCleanupService("./uploads", auditLogger),
 		recipeGenerationLimit: recipeGenerationLimit,
 	}
 }
@@ -338,9 +340,10 @@ func (h *RecipeHandler) DeleteRecipe(c *gin.Context) {
 	logger, _ := auditLogger.(*services.AuditLogger)
 	requestID := c.GetString("request_id")
 
-	// Get recipe title before deleting for audit log
-	var recipeTitle string
-	h.db.QueryRow("SELECT title FROM recipes WHERE id = ? AND user_id = ?", recipeID, userID).Scan(&recipeTitle)
+	// Get recipe info before deleting (for audit log and image cleanup)
+	var recipeTitle, imagePath, thumbnailPath string
+	h.db.QueryRow("SELECT title, image_path, thumbnail_path FROM recipes WHERE id = ? AND user_id = ?",
+		recipeID, userID).Scan(&recipeTitle, &imagePath, &thumbnailPath)
 
 	result, err := h.db.Exec("DELETE FROM recipes WHERE id = ? AND user_id = ?", recipeID, userID)
 	if err != nil {
@@ -352,6 +355,11 @@ func (h *RecipeHandler) DeleteRecipe(c *gin.Context) {
 	if rowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Recipe not found"})
 		return
+	}
+
+	// Delete image files from disk after successful database deletion
+	if rowsAffected > 0 {
+		h.imageCleanup.DeleteRecipeImages(imagePath, thumbnailPath, recipeID, userID, requestID)
 	}
 
 	// Log recipe deletion

@@ -4,6 +4,12 @@
 
 Chefly is a high-quality recipe generator powered by Claude AI.
 
+<p align="center">
+  <img src="assets/1.png" alt="Generate Recipe Page" width="400"/>
+  <img src="assets/2.png" alt="My Recipes Page" width="400"/>
+  <img src="assets/3.png" alt="Recipes Example" width="400"/>
+</p>
+
 **Features:**
   - Multi user support, each user can maintain their own recipe list
   -	Mobile first UI design

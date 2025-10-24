@@ -5,9 +5,9 @@
 Chefly is a high-quality recipe generator powered by Claude AI.
 
 <p align="center">
-  <img src="assets/1.png" alt="Generate Recipe Page" width="400"/>
-  <img src="assets/2.png" alt="My Recipes Page" width="400"/>
-  <img src="assets/3.png" alt="Recipes Example" width="400"/>
+  <img src="https://github.com/voidquark/Chefly/blob/pics/assets/1.jpeg?raw=true" alt="Generate Recipe Page" width="400"/>
+  <img src="https://github.com/voidquark/Chefly/blob/pics/assets/2.jpeg?raw=true" alt="My Recipes Page" width="400"/>
+  <img src="https://github.com/voidquark/Chefly/blob/pics/assets/3.jpeg?raw=true" alt="Recipes Example" width="400"/>
 </p>
 
 **Features:**

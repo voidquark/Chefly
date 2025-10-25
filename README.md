@@ -114,7 +114,7 @@ If you experience permission issues with bind mounts, it’s likely due to this 
 ## Project Status
 
 > [!IMPORTANT] 
-> This is a **vibe coded** project created to explore what Claude AI can do, how to interact with such a model, and how to plan development around it. It was a self-exploration project with a single purpose to build something for my own personal use. I’m sharing it here in case someone wants to reuse it, fork it, extend it, or add new features. Breaking changes may occur at any time and without notice. **Long term maintenance is uncertain**. Anyone can open an issue for feature requests or bug fixes, but there is no guarantee that I will implement them, please don’t take it personally. There will be no human interaction with this project at the code level by design.
+> This project was created to explore the capabilities of Claude AI, experiment with model interactions, and plan development workflows around it. It was a self-exploration project with a single purpose to build something for my own personal use. I’m sharing it here in case someone wants to reuse it, fork it, extend it, or add new features. Breaking changes may occur at any time and without notice. **Long term maintenance is uncertain**. Anyone can open an issue for feature requests or bug fixes, but there is no guarantee that I will implement them, please don’t take it personally. There will be no human interaction with this project at the code level by design.
 
 ## License
 

@@ -4,6 +4,12 @@
 
 Chefly is a high-quality recipe generator powered by Claude AI.
 
+<p align="center">
+  <img src="https://github.com/voidquark/Chefly/blob/pics/assets/1.jpeg?raw=true" alt="Generate Recipe Page" width="400"/>
+  <img src="https://github.com/voidquark/Chefly/blob/pics/assets/2.jpeg?raw=true" alt="My Recipes Page" width="400"/>
+  <img src="https://github.com/voidquark/Chefly/blob/pics/assets/3.jpeg?raw=true" alt="Recipes Example" width="400"/>
+</p>
+
 **Features:**
   - Multi user support, each user can maintain their own recipe list
   -	Mobile first UI design
@@ -14,13 +20,6 @@ Chefly is a high-quality recipe generator powered by Claude AI.
   - Generate shopping lists from recipes to easily bookmark ingredients
   - Audit logging of every request in json or pretty format
   - Supported `sk`, `en` language
-
-> [!IMPORTANT]
-> This is a **vibe coded** project created to explore what Claude AI can do, how to interact with such a model, and how to plan development around it for project in 1day.
-It was a self-exploration project with a single purpose to build something for my own personal use.
-I’m sharing it here in case someone wants to reuse it, fork it, extend it, or add new features.
-Breaking changes may occur at any time and without notice.
-**Long term maintenance is uncertain**. Anyone can open an issue for feature requests or bug fixes, but there is no guarantee that I will implement them, please don’t take it personally. There will be no human interaction with this project at the code level by design.
 
 ## Stack Information
 
@@ -40,7 +39,7 @@ Breaking changes may occur at any time and without notice.
 
 1. Obtain an API key from the Anthropic console for Claude AI.
 2. Obtain an API key from the OpenAI console for DALL·E 3
-3. Create folders for data storage (e.g. in the current directory: `mkdir chefly_data chefly_uploads`).
+3. Create folder for database and generated images (e.g. in the current directory: `mkdir chefly_data chefly_uploads`).
 4. Run the container as a regular user in a user namespace:
 
 ```bash
@@ -65,6 +64,10 @@ podman run -d \
   --cap-drop=ALL \
   voidquark/chefly:latest
 ```
+
+> [!NOTE]
+> To retain DALL·E 3 generated recipe images, persist `/app/uploads`.
+To keep the SQLite database, persist `/app/data`. 
 
 5. The first registered user becomes the admin. This cannot be changed without directly modifying the database.
 
@@ -107,6 +110,11 @@ If you experience permission issues with bind mounts, it’s likely due to this 
   }
 }
 ```
+
+## Project Status
+
+> [!IMPORTANT] 
+> This project was created to explore the capabilities of Claude AI, experiment with model interactions, and plan development workflows around it. It was a self-exploration project with a single purpose to build something for my own personal use. I’m sharing it here in case someone wants to reuse it, fork it, extend it, or add new features. Breaking changes may occur at any time and without notice. **Long term maintenance is uncertain**. Anyone can open an issue for feature requests or bug fixes, but there is no guarantee that I will implement them, please don’t take it personally. There will be no human interaction with this project at the code level by design.
 
 ## License
 

@@ -21,6 +21,8 @@ Chefly is a high-quality recipe generator powered by Claude AI.
   - Audit logging of every request in json or pretty format
   - Supported `sk`, `en` language
 
+[Blog Post: Why this project?](https://voidquark.com/blog/testing-the-limits-of-vibe-coding)
+
 ## Stack Information
 
 **Backend:** `Go`
